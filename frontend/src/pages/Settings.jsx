@@ -122,8 +122,8 @@ export default function Settings() {
             padding: "4px 12px",
             fontSize: 14,
             fontWeight: 700,
-            color: isValid ? "var(--success)" : "#fff",
-            backgroundColor: isValid ? "transparent" : "var(--danger)",
+            color: isValid ? "#0fa336" : "#fff",
+            backgroundColor: isValid ? "transparent" : "#e22718",
           }}>
             总计: {total.toFixed(1)}%
           </div>
