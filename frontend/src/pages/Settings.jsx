@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const WEIGHT_FIELDS = [
   { key: "weight_valuation", label: "估值", en: "Valuation" },
@@ -18,6 +18,7 @@ const DEFAULTS = {
 
 export default function Settings() {
   const [weights, setWeights] = useState({ ...DEFAULTS });
+  const [savedWeights, setSavedWeights] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -25,13 +26,17 @@ export default function Settings() {
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
-        if (data.weight_valuation != null) setWeights(data);
+        if (data.weight_valuation != null) {
+          setWeights(data);
+          setSavedWeights({ ...data });
+        }
       })
       .catch(() => {});
   }, []);
 
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   const isValid = Math.abs(total - 100) < 0.1;
+  const isDirty = savedWeights && JSON.stringify(weights) !== JSON.stringify(savedWeights);
 
   const handleChange = (key, val) => {
     const num = parseFloat(val) || 0;
@@ -57,6 +62,7 @@ export default function Settings() {
         setMsg(err.detail || "保存失败");
         return;
       }
+      setSavedWeights({ ...weights });
       setMsg("已保存");
     } catch {
       setMsg("保存失败");
@@ -134,6 +140,11 @@ export default function Settings() {
             {saving ? "保存中..." : "保存配置"}
           </button>
           <button className="btn" onClick={handleReset}>恢复默认</button>
+          {isDirty && (
+            <span style={{ color: "#e22718", fontSize: 13, fontWeight: 700 }}>
+              权重已修改，尚未保存
+            </span>
+          )}
           {msg && (
             <span style={{ color: msg === "已保存" ? "var(--success)" : "var(--danger)", fontSize: 13 }}>
               {msg}
