@@ -217,8 +217,6 @@ export default function StockList() {
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change_5d")}>5日{sortIndicator("change_5d")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>当日{sortIndicator("change")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("score")}>综合评分{sortIndicator("score")}</th>
-                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("valuation")}>估值{sortIndicator("valuation")}</th>
-                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("technical")}>技术面{sortIndicator("technical")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("market_cap")}>总市值{sortIndicator("market_cap")}</th>
                 <th>所属ETF</th>
                 <th style={{ textAlign: "right" }}>操作</th>
@@ -227,11 +225,11 @@ export default function StockList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="14" className="loading">加载中...</td>
+                  <td colSpan="12" className="loading">加载中...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="14" className="empty-state"><h3>暂无数据</h3></td>
+                  <td colSpan="12" className="empty-state"><h3>暂无数据</h3></td>
                 </tr>
               ) : (
                 filtered.map((stock) => {
@@ -288,12 +286,6 @@ export default function StockList() {
                             {stock.score.total_score.toFixed(0)}
                           </span>
                         ) : "--"}
-                      </td>
-                      <td className="text-right">
-                        {stock.score ? stock.score.valuation_score.toFixed(0) : "--"}
-                      </td>
-                      <td className="text-right">
-                        {stock.score ? stock.score.technical_score.toFixed(0) : "--"}
                       </td>
                       <td className="text-right">
                         {formatMarketCap(stock.market_cap)}
