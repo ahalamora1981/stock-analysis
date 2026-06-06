@@ -47,6 +47,7 @@ export default function StockDetail() {
   const fmtPct = (v) => v != null ? `${v >= 0 ? "+" : ""}${v.toFixed(2)}%` : "--";
   const fmtB = (v) => {
     if (!v) return "--";
+    if (v >= 10000) return (v / 10000).toFixed(2) + "万亿";
     return v.toFixed(2) + "亿";
   };
 

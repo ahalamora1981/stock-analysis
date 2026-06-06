@@ -176,6 +176,7 @@ export default function StockList() {
 
   const formatMarketCap = (val) => {
     if (!val) return "--";
+    if (val >= 10000) return (val / 10000).toFixed(2) + "万亿";
     return val.toFixed(2) + "亿";
   };
 
