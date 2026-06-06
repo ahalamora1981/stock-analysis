@@ -13,6 +13,7 @@ from app.models.analysis import (  # noqa: F401
     FundamentalAnalysis, CapitalFlowAnalysis, CompositeScore,
 )
 from app.models.position import Position, PositionDetail, Transaction, Suggestion, HistorySummary  # noqa: F401
+from app.models.config import AppConfig  # noqa: F401
 from app.routers.stocks import router as stocks_router
 from app.routers.data import router as data_router
 from app.routers.analysis import router as analysis_router
@@ -21,6 +22,7 @@ from app.routers.suggestions import router as suggestions_router
 from app.routers.sectors import router as sectors_router
 from app.routers.market import router as market_router
 from app.routers.export import router as export_router
+from app.routers.config import router as config_router
 
 
 @asynccontextmanager
@@ -48,6 +50,7 @@ app.include_router(suggestions_router, prefix=API_V1_PREFIX)
 app.include_router(sectors_router, prefix=API_V1_PREFIX)
 app.include_router(market_router, prefix=API_V1_PREFIX)
 app.include_router(export_router, prefix=API_V1_PREFIX)
+app.include_router(config_router, prefix=API_V1_PREFIX)
 
 
 @app.get(f"{API_V1_PREFIX}/health")

@@ -5,6 +5,7 @@ import StockList from "./pages/StockList";
 import Sectors from "./pages/Sectors";
 import Positions from "./pages/Positions";
 import Suggestions from "./pages/Suggestions";
+import Settings from "./pages/Settings";
 import "./styles/bmw-m-theme.css";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="sectors" element={<Sectors />} />
           <Route path="positions" element={<Positions />} />
           <Route path="suggestions" element={<Suggestions />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

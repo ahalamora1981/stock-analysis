@@ -10,6 +10,7 @@ from app.models.analysis import (
     ValuationAnalysis, TechnicalAnalysis, FundamentalAnalysis,
     CapitalFlowAnalysis, CompositeScore,
 )
+from app.models.config import AppConfig
 
 DEFAULT_WEIGHTS = {
     "valuation": 0.25,
@@ -20,6 +21,20 @@ DEFAULT_WEIGHTS = {
 }
 
 
+async def _get_weights(db: AsyncSession) -> dict:
+    result = await db.execute(select(AppConfig).where(AppConfig.id == 1))
+    cfg = result.scalar_one_or_none()
+    if not cfg:
+        return DEFAULT_WEIGHTS.copy()
+    return {
+        "valuation": cfg.weight_valuation / 100.0,
+        "technical": cfg.weight_technical / 100.0,
+        "fundamental": cfg.weight_fundamental / 100.0,
+        "capital_flow": cfg.weight_capital_flow / 100.0,
+        "momentum": cfg.weight_momentum / 100.0,
+    }
+
+
 async def run_composite_scoring():
     """Calculate composite scores for all active stocks."""
     async with engine.begin() as conn:
@@ -27,6 +42,7 @@ async def run_composite_scoring():
 
     today = date.today()
     async with async_session() as db:
+        weights = await _get_weights(db)
         result = await db.execute(select(Stock).where(Stock.is_active == True))
         stocks = result.scalars().all()
         scores = []
@@ -82,11 +98,11 @@ async def run_composite_scoring():
             c_score = cf.capital_flow_score if cf else 50
 
             total = (
-                v_score * DEFAULT_WEIGHTS["valuation"]
-                + t_score * DEFAULT_WEIGHTS["technical"]
-                + f_score * DEFAULT_WEIGHTS["fundamental"]
-                + c_score * DEFAULT_WEIGHTS["capital_flow"]
-                + momentum_score * DEFAULT_WEIGHTS["momentum"]
+                v_score * weights["valuation"]
+                + t_score * weights["technical"]
+                + f_score * weights["fundamental"]
+                + c_score * weights["capital_flow"]
+                + momentum_score * weights["momentum"]
             )
 
             if total >= 70:
