@@ -60,12 +60,10 @@ export default function StockDetail() {
             <button className="btn btn-sm" onClick={() => navigate("/stocks")} style={{ fontSize: 12 }}>← 返回</button>
             <h2>{stock.name}</h2>
             <span style={{ fontFamily: "monospace", color: "var(--muted)" }}>{stock.code}</span>
-          </div>
-          <p style={{ marginLeft: 48 }}>
             {stock.etf_list.split("、").map((e) => (
-              <span key={e} className="tag tag-neutral" style={{ marginRight: 4 }}>{e}</span>
+              <span key={e} className="tag tag-neutral">{e}</span>
             ))}
-          </p>
+          </div>
         </div>
         {composite && (
           <div style={{ textAlign: "right" }}>
