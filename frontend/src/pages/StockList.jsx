@@ -10,6 +10,7 @@ export default function StockList() {
   const [sortDir, setSortDir] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [addCode, setAddCode] = useState("");
   const [addName, setAddName] = useState("");
@@ -50,9 +51,24 @@ export default function StockList() {
       await fetch("/api/analysis/run", { method: "POST" });
       await fetchData();
     } catch (err) {
-      console.error("Failed to run analysis:", err);
+      console.error("Failed to analyze:", err);
     } finally {
       setFetching(false);
+    }
+  };
+
+  const handleInitialize = async () => {
+    if (!confirm("确定要初始化所有数据吗？这将导入股票、获取数据并运行分析。")) return;
+    setInitializing(true);
+    try {
+      await fetch("/api/stocks/initialize", { method: "POST" });
+      await fetchData();
+      alert("初始化完成！");
+    } catch (err) {
+      console.error("Failed to initialize:", err);
+      alert("初始化失败，请重试");
+    } finally {
+      setInitializing(false);
     }
   };
 
@@ -197,6 +213,9 @@ export default function StockList() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ width: 240 }}
           />
+          <button className="btn btn-primary" onClick={handleInitialize} disabled={initializing}>
+            {initializing ? "初始化中..." : "一键初始化"}
+          </button>
           <button className="btn btn-primary" onClick={openAddDialog}>新增股票</button>
           <button className="btn" onClick={handleAnalyze} disabled={fetching}>
             {fetching ? "分析中..." : "运行分析"}
