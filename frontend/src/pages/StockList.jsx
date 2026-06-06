@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function StockList() {
+  const navigate = useNavigate();
   const [stocks, setStocks] = useState([]);
   const [scores, setScores] = useState({});
   const [search, setSearch] = useState("");
@@ -229,7 +231,7 @@ export default function StockList() {
                 filtered.map((stock) => {
                   const g = gradeLabel(stock.score?.grade);
                   return (
-                    <tr key={stock.id}>
+                    <tr key={stock.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/stocks/${stock.code}`)}>
                       <td style={{ color: "var(--muted)" }}>
                         {stock.score?.rank || "--"}
                       </td>
