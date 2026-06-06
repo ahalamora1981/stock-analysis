@@ -158,6 +158,9 @@ export default function StockList() {
       case "score": return s.score?.total_score || 0;
       case "valuation": return s.score?.valuation_score || 0;
       case "technical": return s.score?.technical_score || 0;
+      case "change_60d": return s.change_60d || 0;
+      case "change_20d": return s.change_20d || 0;
+      case "change_5d": return s.change_5d || 0;
       case "change": return s.change_pct || 0;
       default: return 0;
     }
@@ -209,9 +212,9 @@ export default function StockList() {
                 <th>代码</th>
                 <th>名称</th>
                 <th style={{ textAlign: "right" }}>最新价</th>
-                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>60日{sortIndicator("change")}</th>
-                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>20日{sortIndicator("change")}</th>
-                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>5日{sortIndicator("change")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change_60d")}>60日{sortIndicator("change_60d")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change_20d")}>20日{sortIndicator("change_20d")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change_5d")}>5日{sortIndicator("change_5d")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>当日{sortIndicator("change")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("score")}>综合评分{sortIndicator("score")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("valuation")}>估值{sortIndicator("valuation")}</th>
