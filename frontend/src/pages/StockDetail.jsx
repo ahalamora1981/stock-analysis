@@ -48,10 +48,8 @@ export default function StockDetail() {
   const fmtB = (v) => {
     if (!v) return "--";
     const fmt = (n) => n.toLocaleString("zh-CN");
-    if (v >= 1e12) return fmt(v / 1e8) + "亿";
-    if (v >= 1e8) return fmt(v / 1e8) + "亿";
-    if (v >= 1e4) return fmt(v / 1e4) + "万";
-    return fmt(v) + "元";
+    if (v >= 1e9) return (v / 1e8).toFixed(2) + "亿";
+    return fmt(Math.round(v / 1e4)) + "万";
   };
 
   return (

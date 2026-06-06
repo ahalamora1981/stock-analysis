@@ -176,10 +176,8 @@ export default function StockList() {
   const formatMarketCap = (val) => {
     if (!val) return "--";
     const fmt = (n) => n.toLocaleString("zh-CN");
-    if (val >= 1e12) return fmt(val / 1e8) + "亿";
-    if (val >= 1e8) return fmt(val / 1e8) + "亿";
-    if (val >= 1e4) return fmt(val / 1e4) + "万";
-    return fmt(val) + "元";
+    if (val >= 1e9) return (val / 1e8).toFixed(2) + "亿";
+    return fmt(Math.round(val / 1e4)) + "万";
   };
 
   const thStyle = { cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" };
