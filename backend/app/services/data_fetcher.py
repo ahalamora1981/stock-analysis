@@ -67,7 +67,7 @@ def fetch_realtime_quotes() -> pd.DataFrame:
                     "成交额": float(data[37] or 0),
                     "换手率": float(data[38] or 0),
                     "市盈率-动态": float(data[39] or 0),
-                    "总市值": float(data[44] or 0) * 10000,
+                    "总市值": float(data[44] or 0),
                     "市净率": float(data[46] or 0) if len(data) > 46 else 0,
                 }
                 all_rows.append(row)

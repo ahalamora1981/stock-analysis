@@ -47,9 +47,7 @@ export default function StockDetail() {
   const fmtPct = (v) => v != null ? `${v >= 0 ? "+" : ""}${v.toFixed(2)}%` : "--";
   const fmtB = (v) => {
     if (!v) return "--";
-    const fmt = (n) => n.toLocaleString("zh-CN");
-    if (v >= 1e9) return (v / 1e8).toFixed(2) + "亿";
-    return fmt(Math.round(v / 1e4)) + "万";
+    return v.toFixed(2) + "亿";
   };
 
   return (
