@@ -40,7 +40,10 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
-    if (!isValid) return;
+    if (!isValid) {
+      alert("权重总和必须为 100%，请调整后再保存");
+      return;
+    }
     setSaving(true);
     setMsg("");
     try {
@@ -113,18 +116,21 @@ export default function Settings() {
         </div>
 
         <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ fontSize: 14 }}>
-            总计: <strong style={{ color: isValid ? "var(--success)" : "var(--danger)" }}>{total.toFixed(1)}%</strong>
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "4px 12px",
+            fontSize: 14,
+            fontWeight: 700,
+            color: isValid ? "var(--success)" : "#fff",
+            backgroundColor: isValid ? "transparent" : "var(--danger)",
+          }}>
+            总计: {total.toFixed(1)}%
           </div>
-          {!isValid && (
-            <div style={{ color: "var(--danger)", fontSize: 13 }}>
-              {total > 100 ? `超出 ${ (total - 100).toFixed(1)}%` : `缺少 ${(100 - total).toFixed(1)}%`}
-            </div>
-          )}
         </div>
 
         <div style={{ marginTop: 24, display: "flex", gap: 12, alignItems: "center" }}>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving || !isValid}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? "保存中..." : "保存配置"}
           </button>
           <button className="btn" onClick={handleReset}>恢复默认</button>
