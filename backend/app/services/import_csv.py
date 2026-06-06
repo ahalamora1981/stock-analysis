@@ -1,4 +1,5 @@
 import csv
+import os
 from pathlib import Path
 
 from sqlalchemy import select
@@ -7,7 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import async_session, engine
 from app.models.stock import Base, Stock
 
-CSV_PATH = Path(__file__).resolve().parent.parent.parent.parent / "stocks" / "A股行业ETF持仓股票.csv"
+# Support both local dev and Docker environments
+if os.path.exists("/app/stocks"):
+    CSV_PATH = Path("/app/stocks/A股行业ETF持仓股票.csv")
+else:
+    CSV_PATH = Path(__file__).resolve().parent.parent.parent.parent / "stocks" / "A股行业ETF持仓股票.csv"
 
 
 async def import_stocks():

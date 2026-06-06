@@ -20,6 +20,9 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --no-dev
 COPY backend/ .
 
+# Stocks CSV data
+COPY stocks/ /app/stocks/
+
 # Frontend build output
 COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
