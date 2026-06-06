@@ -141,8 +141,8 @@ export default function Settings() {
           </button>
           <button className="btn" onClick={handleReset}>恢复默认</button>
           {isDirty && (
-            <span style={{ color: "#e22718", fontSize: 13, fontWeight: 700 }}>
-              权重已修改，尚未保存
+            <span style={{ color: "#fff", fontSize: 26, fontWeight: 700 }}>
+              修改未保存
             </span>
           )}
           {msg && (
