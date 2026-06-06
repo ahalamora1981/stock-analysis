@@ -4,7 +4,8 @@ export default function StockList() {
   const [stocks, setStocks] = useState([]);
   const [scores, setScores] = useState({});
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("rank");
+  const [sortField, setSortField] = useState("rank");
+  const [sortDir, setSortDir] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
 
@@ -52,6 +53,20 @@ export default function StockList() {
     setStocks(stocks.filter((s) => s.id !== id));
   };
 
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir(field === "rank" ? "asc" : "desc");
+    }
+  };
+
+  const sortIndicator = (field) => {
+    if (sortField !== field) return " ↕";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  };
+
   const gradeLabel = (g) => {
     switch (g) {
       case 1: return { text: "优秀", cls: "score-excellent" };
@@ -76,15 +91,23 @@ export default function StockList() {
     );
   }
 
-  if (sortBy === "rank") {
-    filtered.sort((a, b) => (a.score?.rank || 999) - (b.score?.rank || 999));
-  } else if (sortBy === "score_desc") {
-    filtered.sort((a, b) => (b.score?.total_score || 0) - (a.score?.total_score || 0));
-  } else if (sortBy === "score_asc") {
-    filtered.sort((a, b) => (a.score?.total_score || 0) - (b.score?.total_score || 0));
-  } else if (sortBy === "change_desc") {
-    filtered.sort((a, b) => (b.change_pct || 0) - (a.change_pct || 0));
-  }
+  const getVal = (s, field) => {
+    switch (field) {
+      case "rank": return s.score?.rank || 999;
+      case "score": return s.score?.total_score || 0;
+      case "valuation": return s.score?.valuation_score || 0;
+      case "technical": return s.score?.technical_score || 0;
+      case "change": return s.change_pct || 0;
+      default: return 0;
+    }
+  };
+
+  filtered.sort((a, b) => {
+    const va = getVal(a, sortField);
+    const vb = getVal(b, sortField);
+    if (sortField === "rank") return va - vb;
+    return sortDir === "asc" ? va - vb : vb - va;
+  });
 
   const formatMarketCap = (val) => {
     if (!val) return "--";
@@ -92,6 +115,8 @@ export default function StockList() {
     if (val >= 1e8) return (val / 1e8).toFixed(1) + "亿";
     return val.toFixed(0);
   };
+
+  const thStyle = { cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" };
 
   return (
     <div>
@@ -108,12 +133,6 @@ export default function StockList() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ width: 240 }}
           />
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="rank">按排名</option>
-            <option value="score_desc">评分高→低</option>
-            <option value="score_asc">评分低→高</option>
-            <option value="change_desc">涨幅高→低</option>
-          </select>
           <button className="btn" onClick={handleAnalyze} disabled={fetching}>
             {fetching ? "分析中..." : "运行分析"}
           </button>
@@ -124,14 +143,14 @@ export default function StockList() {
           <table>
             <thead>
               <tr>
-                <th>#</th>
+                <th style={thStyle} onClick={() => handleSort("rank")}>#{sortIndicator("rank")}</th>
                 <th>代码</th>
                 <th>名称</th>
                 <th style={{ textAlign: "right" }}>最新价</th>
-                <th style={{ textAlign: "right" }}>涨跌幅</th>
-                <th style={{ textAlign: "right" }}>综合评分</th>
-                <th style={{ textAlign: "right" }}>估值</th>
-                <th style={{ textAlign: "right" }}>技术面</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>涨跌幅{sortIndicator("change")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("score")}>综合评分{sortIndicator("score")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("valuation")}>估值{sortIndicator("valuation")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("technical")}>技术面{sortIndicator("technical")}</th>
                 <th style={{ textAlign: "right" }}>总市值</th>
                 <th>所属ETF</th>
                 <th style={{ textAlign: "right" }}>操作</th>
