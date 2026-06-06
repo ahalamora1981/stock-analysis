@@ -1,9 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, Float, DateTime
-from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.models.stock import Base
 
 
 class AppConfig(Base):
