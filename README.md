@@ -2,54 +2,673 @@
 
 一个基于 FastAPI + React 的 A 股行业 ETF 持仓股票分析 Web 应用，提供多维度股票分析、综合评分、持仓管理和操作建议。
 
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+---
+
+## 目录
+
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [快速开始](#快速开始)
+- [使用手册](#使用手册)
+- [API 接口文档](#api-接口文档)
+- [项目结构](#项目结构)
+- [部署指南](#部署指南)
+- [常见问题](#常见问题)
+- [License](#license)
+
+---
+
 ## 功能特性
 
-- **股票池管理** - 支持 CSV 导入 A 股行业 ETF 持仓股票，可手动增删
-- **行情数据** - 实时获取股票行情（腾讯行情 API）
-- **多维度分析**
-  - 估值分析：PE/PB 历史分位数
-  - 技术面分析：MA、MACD、KDJ、RSI 指标
-  - 动量分析：近期涨跌幅排名
-- **综合评分** - 多因子加权评分系统，支持权重调整
-- **持仓管理** - 支持分批买入/卖出，自动计算盈亏
-- **历史统计** - 记录历史交易盈亏和收益率
-- **操作建议** - 止损/止盈/买入推荐/调仓/行业集中度提醒
-- **行业板块** - 按 ETF 维度分析行业强弱
-- **市场概览** - 市场整体估值、情绪指标
-- **Excel 导出** - 一键导出分析报告
+### 核心功能
+
+| 功能 | 说明 |
+|------|------|
+| **股票池管理** | 支持 CSV 导入 148 只 A 股行业 ETF 持仓股票，可手动增删 |
+| **行情数据** | 通过腾讯行情 API 实时获取股票最新价、涨跌幅、PE、PB、市值等 |
+| **多维度分析** | 估值分析、技术面分析、动量分析，综合评估股票质量 |
+| **综合评分** | 多因子加权评分系统，0-100 分，支持自定义权重 |
+| **持仓管理** | 支持分批买入/卖出，自动计算加权平均成本和盈亏 |
+| **历史统计** | 记录已卖出股票的累计盈亏和收益率 |
+| **操作建议** | 基于评分和持仓自动生成止损/止盈/买入/调仓/行业集中度建议 |
+| **行业板块** | 按 ETF 维度分析行业强弱排名 |
+| **市场概览** | 市场整体估值水平、涨跌统计、情绪指标 |
+| **Excel 导出** | 一键导出包含股票分析和持仓数据的 Excel 报告 |
+
+### 分析维度
+
+| 维度 | 指标 | 权重(默认) |
+|------|------|-----------|
+| **估值分析** | PE 分位数、PB 分位数 | 25% |
+| **技术面分析** | MA 均线趋势、MACD 金叉/死叉、KDJ 超买超卖、RSI | 20% |
+| **动量分析** | 20 日涨幅、60 日涨幅 | 15% |
+| **综合评分** | 以上维度加权汇总 | 100% |
+
+### 评分等级
+
+| 分数区间 | 等级 | 含义 |
+|----------|------|------|
+| ≥ 70 | 优秀 | 估值低、趋势好，值得关注 |
+| 55-69 | 良好 | 综合表现不错 |
+| 40-54 | 一般 | 中性，无明显优势 |
+| < 40 | 较差 | 高估或趋势弱，需谨慎 |
+
+### 操作建议类型
+
+| 类型 | 触发条件 | 优先级 |
+|------|----------|--------|
+| 止损 | 持仓亏损 > 15% | 高 |
+| 止盈 | 持仓盈利 > 30% | 中 |
+| 调仓 | 综合评分 < 40 | 中 |
+| 行业集中度 | 单一行业持仓 > 40% | 中 |
+| 买入推荐 | 未持仓 + 评分 ≥ 70 | 低 |
+
+---
 
 ## 技术栈
 
-- **后端**: Python 3.12 + FastAPI + SQLAlchemy + SQLite
-- **前端**: React + Vite + ECharts
-- **数据源**: 腾讯行情 API
-- **部署**: Docker Compose
+### 后端
+
+- **Python 3.12** - 主语言
+- **FastAPI** - Web 框架
+- **SQLAlchemy** - ORM
+- **SQLite** - 数据库（通过 aiosqlite 异步驱动）
+- **AKShare** - 数据源（备用）
+- **openpyxl** - Excel 导出
+- **uv** - Python 包管理
+
+### 前端
+
+- **React 18** - UI 框架
+- **Vite** - 构建工具
+- **ECharts** - 图表库（备用，当前版本未使用）
+- **React Router** - 路由
+
+### 数据源
+
+- **腾讯行情 API** (`qt.gtimg.cn`) - 实时行情 + 历史 K 线
+- 无需 API Key，免费使用
+
+### 部署
+
+- **Docker Compose** - 容器化部署
+- **Nginx** - 前端静态文件托管 + 反向代理
+
+---
 
 ## 快速开始
 
-### 本地开发
+### 环境要求
+
+- Python 3.12+
+- Node.js 18+
+- uv (Python 包管理)
+- npm (Node.js 包管理)
+
+### 1. 克隆仓库
 
 ```bash
-# 后端
-cd backend
-uv sync
-uv run uvicorn app.main:app --reload --port 8000
+git clone https://github.com/ahalamora1981/stock-analysis.git
+cd stock-analysis
+```
 
-# 前端
+### 2. 启动后端
+
+```bash
+cd backend
+
+# 安装依赖
+uv sync
+
+# 启动服务（开发模式，自动重载）
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+后端将在 http://localhost:8000 启动。
+
+### 3. 启动前端
+
+```bash
 cd frontend
+
+# 安装依赖
 npm install
+
+# 启动开发服务器
 npm run dev
 ```
 
-访问 http://localhost:5173
+前端将在 http://localhost:5173 启动。
 
-### Docker 部署
+### 4. 初始化数据
 
-```bash
-docker-compose up -d
+1. 打开浏览器访问 http://localhost:5173
+2. 进入「股票总览」页面
+3. 点击「更新行情」按钮，拉取实时行情数据
+4. 点击「运行分析」按钮，执行多维度分析
+5. 进入「市场概览」页面，查看整体数据
+
+---
+
+## 使用手册
+
+### 页面说明
+
+系统包含 5 个主要页面：
+
+#### 1. 市场概览 (Dashboard)
+
+**路径**: `/`
+
+显示市场整体情况：
+- **总资产统计**: 总市值、平均市盈率、平均市净率
+- **市场情绪**: 贪婪/恐惧指数（基于涨跌比计算）
+- **涨跌统计**: 上涨/下跌/平盘家数，涨停/跌停家数
+- **评分分布**: 优秀/良好/一般/较差各多少只
+- **Excel 导出**: 点击按钮导出分析报告
+
+#### 2. 股票总览 (Stock List)
+
+**路径**: `/stocks`
+
+显示所有股票的综合评分和排名：
+- **搜索**: 支持按代码、名称、ETF 搜索
+- **排序**: 按排名、评分、涨幅排序
+- **更新行情**: 拉取最新行情数据
+- **运行分析**: 执行多维度分析并更新评分
+- **评分显示**: 红色(优秀)、蓝色(良好)、黄色(一般)、绿色(较差)
+- **涨跌颜色**: 红涨绿跌（中国股市惯例）
+
+#### 3. 行业板块 (Sectors)
+
+**路径**: `/sectors`
+
+按 ETF 维度显示行业分析：
+- **行业卡片**: 每个行业一张卡片，显示平均评分和趋势
+- **趋势箭头**: ↑ 上升 / → 平稳 / ↓ 下降
+- **成分股**: 每个行业显示 Top 5 评分最高的股票
+
+#### 4. 我的持仓 (Positions)
+
+**路径**: `/positions`
+
+管理个人持仓：
+- **资产概览**: 持仓总资产、总成本、盈亏、收益率、历史盈亏
+- **买入**: 点击「买入股票」，输入代码、数量、价格
+- **卖出**: 点击持仓行右侧「卖出」按钮，输入数量和价格
+- **重置**: 清空所有持仓和交易记录
+- **交易历史**: 查看所有买入/卖出记录
+
+**持仓统计说明**:
+| 指标 | 含义 |
+|------|------|
+| 持仓总资产 | 当前持有股票的市值 |
+| 持仓总成本 | 买入这些股票的总花费 |
+| 持仓总盈亏 | 市值 - 成本（未实现盈亏） |
+| 持仓收益率 | 盈亏 / 成本 × 100% |
+| 历史总盈亏 | 已卖出股票的累计盈亏 |
+| 历史总收益率 | 累计盈亏 / 累计投入 × 100% |
+
+#### 5. 操作建议 (Suggestions)
+
+**路径**: `/suggestions`
+
+显示系统生成的投资建议：
+- **生成建议**: 点击按钮重新分析并生成建议
+- **建议类型**: 止损、止盈、买入推荐、调仓、行业集中度
+- **优先级**: 高(止损) > 中(止盈/调仓) > 低(买入推荐)
+
+### 数据更新流程
+
+推荐的使用流程：
+
+```
+1. 更新行情 → 拉取最新股价
+2. 运行分析 → 计算各维度评分
+3. 生成建议 → 基于评分和持仓生成操作建议
+4. 查看建议 → 参考建议决定是否操作
+5. 执行交易 → 在持仓页面买入/卖出
 ```
 
-访问 http://localhost
+### 评分计算逻辑
+
+**估值评分** (0-100):
+- PE/PB 在历史数据中的分位数
+- 分位数越低（越便宜），评分越高
+- 公式: `估值分 = (100 - PE分位) × 0.6 + (100 - PB分位) × 0.4`
+
+**技术面评分** (0-100):
+- 基础分 50 分
+- MA 多头排列: +15 分
+- MACD 金叉: +15 分
+- KDJ 超卖金叉: +10 分
+- RSI 超卖(<30): +10 分
+- 反之扣分
+
+**综合评分**:
+```
+综合分 = 估值分 × 25% + 技术分 × 20% + 基本面分 × 25% + 资金流分 × 15% + 动量分 × 15%
+```
+
+### 颜色说明
+
+采用中国股市惯例：
+- **红色** = 上涨 / 盈利
+- **绿色** = 下跌 / 亏损
+
+评分徽章颜色：
+- 🟥 红色 = 优秀 (≥70)
+- 🟦 蓝色 = 良好 (55-69)
+- 🟨 黄色 = 一般 (40-54)
+- 🟩 绿色 = 较差 (<40)
+
+---
+
+## API 接口文档
+
+### 基础信息
+
+- **Base URL**: `http://localhost:8000/api`
+- **Content-Type**: `application/json`
+- **字符编码**: UTF-8
+
+### 股票管理
+
+#### 获取股票列表
+
+```
+GET /api/stocks
+```
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| search | string | 否 | 按代码或名称搜索 |
+| etf | string | 否 | 按 ETF 名称筛选 |
+
+**响应示例**:
+```json
+[
+  {
+    "id": 1,
+    "code": "600036",
+    "name": "招商银行",
+    "etf_list": "银行ETF",
+    "is_active": true,
+    "created_at": "2026-01-01T00:00:00"
+  }
+]
+```
+
+#### 获取股票列表（含最新行情）
+
+```
+GET /api/stocks/with-latest
+```
+
+**响应示例**:
+```json
+[
+  {
+    "id": 1,
+    "code": "600036",
+    "name": "招商银行",
+    "etf_list": "银行ETF",
+    "is_active": true,
+    "close": 38.58,
+    "change_pct": 1.26,
+    "pe_ttm": 6.45,
+    "pb": 0.86,
+    "market_cap": 972982000000,
+    "volume": 778709,
+    "date": "2026-01-15"
+  }
+]
+```
+
+#### 添加股票
+
+```
+POST /api/stocks
+```
+
+**请求体**:
+```json
+{
+  "code": "600036",
+  "name": "招商银行",
+  "etf_list": "银行ETF"
+}
+```
+
+#### 删除股票
+
+```
+DELETE /api/stocks/{stock_id}
+```
+
+### 行情数据
+
+#### 拉取行情数据
+
+```
+POST /api/data/fetch
+```
+
+**响应示例**:
+```json
+{
+  "message": "Updated 148 stocks"
+}
+```
+
+#### 获取历史日线数据
+
+```
+GET /api/data/daily/{stock_code}
+```
+
+**响应示例**:
+```json
+[
+  {
+    "date": "2026-01-15",
+    "open": 38.18,
+    "high": 38.70,
+    "low": 38.11,
+    "close": 38.58,
+    "volume": 778709,
+    "change_pct": 1.26,
+    "pe_ttm": 6.45,
+    "pb": 0.86,
+    "market_cap": 972982000000
+  }
+]
+```
+
+### 分析
+
+#### 运行分析
+
+```
+POST /api/analysis/run
+```
+
+**响应示例**:
+```json
+{
+  "valuation": 148,
+  "technical": 148,
+  "composite": 148
+}
+```
+
+#### 获取综合评分
+
+```
+GET /api/analysis/composite
+```
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| search | string | 否 | 按代码或名称搜索 |
+
+**响应示例**:
+```json
+[
+  {
+    "stock_id": 1,
+    "code": "600036",
+    "name": "招商银行",
+    "etf_list": "银行ETF",
+    "rank": 1,
+    "total_score": 72.5,
+    "valuation_score": 80.0,
+    "technical_score": 65.0,
+    "fundamental_score": 50.0,
+    "capital_flow_score": 50.0,
+    "momentum_score": 68.0,
+    "grade": 1
+  }
+]
+```
+
+#### 获取估值详情
+
+```
+GET /api/analysis/valuation/{stock_code}
+```
+
+#### 获取技术面详情
+
+```
+GET /api/analysis/technical/{stock_code}
+```
+
+### 持仓管理
+
+#### 获取持仓列表
+
+```
+GET /api/positions
+```
+
+**响应示例**:
+```json
+{
+  "positions": [
+    {
+      "id": 1,
+      "stock_id": 1,
+      "code": "600036",
+      "name": "招商银行",
+      "etf_list": "银行ETF",
+      "total_shares": 100,
+      "avg_cost": 38.50,
+      "total_cost": 3850.00,
+      "latest_price": 38.58,
+      "market_value": 3858.00,
+      "pnl": 8.00,
+      "pnl_pct": 0.21
+    }
+  ],
+  "summary": {
+    "total_cost": 3850.00,
+    "total_value": 3858.00,
+    "total_pnl": 8.00,
+    "total_pnl_pct": 0.21
+  }
+}
+```
+
+#### 买入股票
+
+```
+POST /api/positions/buy
+```
+
+**请求体**:
+```json
+{
+  "stock_code": "600036",
+  "shares": 100,
+  "price": 38.50,
+  "buy_date": "2026-01-15",
+  "note": "测试买入"
+}
+```
+
+**响应示例**:
+```json
+{
+  "message": "Buy recorded",
+  "position_id": 1
+}
+```
+
+#### 卖出股票
+
+```
+POST /api/positions/sell
+```
+
+**请求体**:
+```json
+{
+  "stock_code": "600036",
+  "shares": 50,
+  "price": 39.00,
+  "sell_date": "2026-01-16",
+  "note": "止盈卖出"
+}
+```
+
+**响应示例**:
+```json
+{
+  "message": "Sell recorded",
+  "pnl": 25.00
+}
+```
+
+#### 重置所有数据
+
+```
+POST /api/positions/reset
+```
+
+**响应示例**:
+```json
+{
+  "message": "All positions, transactions, and history cleared"
+}
+```
+
+#### 获取历史统计
+
+```
+GET /api/positions/history
+```
+
+**响应示例**:
+```json
+{
+  "total_pnl": 150.00,
+  "total_invested": 7700.00,
+  "return_rate": 1.95
+}
+```
+
+#### 获取交易历史
+
+```
+GET /api/positions/transactions
+```
+
+**参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| stock_code | string | 否 | 按股票代码筛选 |
+
+### 操作建议
+
+#### 生成建议
+
+```
+POST /api/suggestions/generate
+```
+
+#### 获取建议列表
+
+```
+GET /api/suggestions
+```
+
+**响应示例**:
+```json
+[
+  {
+    "id": 1,
+    "code": "600519",
+    "name": "贵州茅台",
+    "type": "stop_loss",
+    "reason": "持仓亏损15.1%，超过止损线(15%)，建议止损卖出",
+    "priority": 2,
+    "is_read": false,
+    "created_at": "2026-01-15 10:30:00"
+  }
+]
+```
+
+### 行业板块
+
+#### 获取行业列表
+
+```
+GET /api/sectors
+```
+
+**响应示例**:
+```json
+[
+  {
+    "name": "煤炭ETF",
+    "stock_count": 10,
+    "avg_score": 55.3,
+    "trend": 0,
+    "top_stocks": [
+      {"code": "601699", "name": "潞安环能", "score": 59.5},
+      {"code": "600985", "name": "淮北矿业", "score": 59.5}
+    ]
+  }
+]
+```
+
+### 市场概览
+
+#### 获取市场数据
+
+```
+GET /api/market/overview
+```
+
+**响应示例**:
+```json
+{
+  "total_market_cap": 2864573600,
+  "avg_pe": 93.16,
+  "avg_pb": 4.72,
+  "advance_count": 59,
+  "decline_count": 86,
+  "flat_count": 3,
+  "limit_up": 0,
+  "limit_down": 0,
+  "sentiment_score": -18.2,
+  "sentiment_label": "偏空",
+  "grade_distribution": {"1": 0, "2": 15, "3": 130, "4": 3},
+  "stock_count": 148
+}
+```
+
+### 导出
+
+#### 导出 Excel 报告
+
+```
+GET /api/export/excel
+```
+
+返回 Excel 文件下载，包含：
+- 股票分析 Sheet: 排名、评分、各维度分数
+- 持仓 Sheet: 持仓明细、盈亏
+
+---
 
 ## 项目结构
 
@@ -57,49 +676,183 @@ docker-compose up -d
 stock-analysis/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py          # FastAPI 入口
-│   │   ├── models/          # 数据模型
-│   │   ├── routers/         # API 路由
-│   │   └── services/        # 业务逻辑
-│   └── Dockerfile
+│   │   ├── __init__.py
+│   │   ├── main.py              # FastAPI 入口，中间件配置
+│   │   ├── config.py            # 配置（数据库路径、API 前缀）
+│   │   ├── database.py          # SQLite 异步连接
+│   │   ├── models/
+│   │   │   ├── stock.py         # 股票模型
+│   │   │   ├── daily_data.py    # 日线数据模型
+│   │   │   ├── analysis.py      # 分析结果模型（估值/技术/综合）
+│   │   │   └── position.py      # 持仓/交易/建议/历史模型
+│   │   ├── routers/
+│   │   │   ├── stocks.py        # 股票管理 API
+│   │   │   ├── data.py          # 行情数据 API
+│   │   │   ├── analysis.py      # 分析评分 API
+│   │   │   ├── positions.py     # 持仓交易 API
+│   │   │   ├── suggestions.py   # 操作建议 API
+│   │   │   ├── sectors.py       # 行业板块 API
+│   │   │   ├── market.py        # 市场概览 API
+│   │   │   └── export.py        # Excel 导出 API
+│   │   ├── schemas/
+│   │   │   └── stock.py         # Pydantic 数据模型
+│   │   └── services/
+│   │       ├── data_fetcher.py  # 腾讯行情 API 数据获取
+│   │       ├── analyzer.py      # 估值/技术分析引擎
+│   │       ├── scorer.py        # 多因子综合评分
+│   │       ├── suggestion.py    # 操作建议生成
+│   │       └── import_csv.py    # CSV 导入脚本
+│   ├── data/
+│   │   └── stock_analysis.db    # SQLite 数据库文件
+│   ├── Dockerfile
+│   ├── pyproject.toml           # Python 依赖配置
+│   └── uv.lock                  # 依赖锁文件
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # 布局组件
-│   │   ├── pages/           # 页面组件
-│   │   └── styles/          # BMW M 设计系统
-│   ├── nginx.conf
-│   └── Dockerfile
+│   │   ├── components/
+│   │   │   └── Layout.jsx       # 侧边栏布局组件
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx    # 市场概览页
+│   │   │   ├── StockList.jsx    # 股票总览页
+│   │   │   ├── Sectors.jsx      # 行业板块页
+│   │   │   ├── Positions.jsx    # 持仓管理页
+│   │   │   └── Suggestions.jsx  # 操作建议页
+│   │   ├── styles/
+│   │   │   └── bmw-m-theme.css  # BMW M 设计系统 CSS
+│   │   ├── App.jsx              # 路由配置
+│   │   └── main.jsx             # 入口文件
+│   ├── nginx.conf               # Nginx 反向代理配置
+│   ├── Dockerfile
+│   ├── package.json
+│   └── vite.config.js           # Vite 配置（代理到后端）
 ├── stocks/
-│   └── A股行业ETF持仓股票.csv
-├── docker-compose.yml
-└── README.md
+│   └── A股行业ETF持仓股票.csv   # 初始股票池（148 只）
+├── backup/
+│   ├── A股行业ETF前十大持仓.md
+│   └── A股行业ETF持仓股票汇总.md
+├── .issues/                     # 项目 Issue 文档
+├── DESIGN-bmw-m.md              # BMW M 设计规范
+├── docker-compose.yml           # Docker 部署配置
+├── README.md
+└── .gitignore
 ```
 
-## API 接口
+---
 
-| 接口 | 方法 | 说明 |
-|------|------|------|
-| `/api/health` | GET | 健康检查 |
-| `/api/stocks` | GET/POST/DELETE | 股票管理 |
-| `/api/data/fetch` | POST | 获取行情数据 |
-| `/api/analysis/run` | POST | 运行分析 |
-| `/api/analysis/composite` | GET | 综合评分 |
-| `/api/positions` | GET | 持仓列表 |
-| `/api/positions/buy` | POST | 买入 |
-| `/api/positions/sell` | POST | 卖出 |
-| `/api/positions/reset` | POST | 重置所有数据 |
-| `/api/positions/history` | GET | 历史统计 |
-| `/api/suggestions` | GET | 操作建议 |
-| `/api/sectors` | GET | 行业板块 |
-| `/api/market/overview` | GET | 市场概览 |
-| `/api/export/excel` | GET | 导出 Excel |
+## 部署指南
 
-## 颜色说明
+### Docker Compose 部署
 
-采用中国股市惯例：
-- **红色** = 上涨/盈利
-- **绿色** = 下跌/亏损
+#### 前置条件
+
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### 部署步骤
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/ahalamora1981/stock-analysis.git
+cd stock-analysis
+
+# 2. 启动服务
+docker-compose up -d
+
+# 3. 查看日志
+docker-compose logs -f
+
+# 4. 停止服务
+docker-compose down
+```
+
+服务启动后：
+- 前端: http://localhost
+- 后端 API: http://localhost:8000
+
+#### 数据持久化
+
+SQLite 数据库文件存储在 `backend/data/stock_analysis.db`，通过 Docker Volume 挂载到宿主机，重启不会丢失数据。
+
+### Linux 服务器部署
+
+```bash
+# 1. 安装 Docker
+curl -fsSL https://get.docker.com | sh
+
+# 2. 克隆仓库
+git clone https://github.com/ahalamora1981/stock-analysis.git
+cd stock-analysis
+
+# 3. 构建并启动
+docker-compose up -d --build
+
+# 4. 设置开机自启
+sudo systemctl enable docker
+```
+
+---
+
+## 常见问题
+
+### Q: 为什么有些股票的评分为 50 分？
+
+A: 50 分是默认中性分。当某只股票的历史数据不足（少于 20 个交易日）时，估值和技术面分析无法计算，会使用默认值 50 分。
+
+### Q: 行情数据多久更新一次？
+
+A: 行情数据需要手动点击「更新行情」按钮拉取。建议在每日收盘后（15:00 之后）更新。
+
+### Q: 如何添加新的股票到分析池？
+
+A: 两种方式：
+1. 在「股票总览」页面点击相关功能添加
+2. 直接调用 `POST /api/stocks` API
+
+### Q: 重置按钮会清除什么数据？
+
+A: 重置会清除：
+- 所有持仓记录
+- 所有交易历史
+- 历史盈亏统计
+
+不会清除：
+- 股票池数据
+- 行情数据
+- 分析评分数据
+
+### Q: 如何自定义评分权重？
+
+A: 目前评分权重在 `backend/app/services/scorer.py` 中定义为常量，后续版本将支持通过 API 或界面调整。
+
+### Q: Docker 部署后如何更新代码？
+
+A: ```bash
+git pull
+docker-compose up -d --build
+```
+
+---
 
 ## License
 
-MIT
+MIT License
+
+Copyright (c) 2026
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
