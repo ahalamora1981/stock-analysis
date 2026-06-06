@@ -9,6 +9,9 @@ from app.database import get_db
 from app.models.stock import Stock
 from app.models.daily_data import StockDailyData
 from app.schemas.stock import StockCreate, StockResponse, StockUpdate
+from app.services.import_csv import import_stocks
+from app.services.data_fetcher import update_all_daily_data
+from app.services.analyzer import run_all_analysis
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -208,3 +211,15 @@ async def delete_stock(stock_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Stock not found")
     stock.is_active = False
     await db.commit()
+
+
+@router.post("/initialize")
+async def initialize_all():
+    """一键初始化：导入股票、获取数据、运行分析"""
+    # 1. 导入股票
+    await import_stocks()
+    # 2. 获取日线数据
+    await update_all_daily_data()
+    # 3. 运行分析
+    await run_all_analysis()
+    return {"message": "初始化完成"}

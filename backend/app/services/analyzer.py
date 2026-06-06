@@ -472,3 +472,11 @@ async def run_capital_flow_analysis():
 
         await db.commit()
         return count
+
+
+async def run_all_analysis():
+    """Run all analysis steps: valuation, technical, fundamental, capital flow."""
+    await run_valuation_analysis()
+    await run_technical_analysis()
+    await run_fundamental_analysis()
+    await run_capital_flow_analysis()
