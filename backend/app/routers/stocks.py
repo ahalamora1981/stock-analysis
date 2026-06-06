@@ -75,6 +75,26 @@ async def list_stocks_with_latest(
     return rows
 
 
+@router.get("/check-code")
+async def check_stock_code(code: str):
+    """Validate stock code and return name from Tencent API."""
+    prefix = "sh" if code.startswith("6") else "sz"
+    symbol = f"{prefix}{code}"
+    try:
+        resp = requests.get(f"https://qt.gtimg.cn/q={symbol}", timeout=10)
+        match = re.search(r'"(.+)"', resp.text)
+        if not match:
+            raise HTTPException(status_code=400, detail="股票代码无效")
+        data = match.group(1).split("~")
+        if len(data) < 2 or not data[1]:
+            raise HTTPException(status_code=400, detail="股票代码无效")
+        return {"code": code, "name": data[1]}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=502, detail="验证失败，请稍后重试")
+
+
 @router.get("/{stock_id}", response_model=StockResponse)
 async def get_stock(stock_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Stock).where(Stock.id == stock_id))
