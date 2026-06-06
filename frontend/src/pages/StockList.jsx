@@ -4,12 +4,17 @@ export default function StockList() {
   const [stocks, setStocks] = useState([]);
   const [scores, setScores] = useState({});
   const [search, setSearch] = useState("");
-  const [addCode, setAddCode] = useState("");
-  const [adding, setAdding] = useState(false);
   const [sortField, setSortField] = useState("rank");
   const [sortDir, setSortDir] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addCode, setAddCode] = useState("");
+  const [addName, setAddName] = useState("");
+  const [addEtfs, setAddEtfs] = useState("");
+  const [addChecking, setAddChecking] = useState(false);
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -55,23 +60,55 @@ export default function StockList() {
     setStocks(stocks.filter((s) => s.id !== id));
   };
 
-  const handleAdd = async () => {
+  const openAddDialog = () => {
+    setAddCode("");
+    setAddName("");
+    setAddEtfs("");
+    setAddError("");
+    setShowAdd(true);
+  };
+
+  const handleCheckCode = async () => {
     const code = addCode.trim();
     if (!code) return;
-    setAdding(true);
+    setAddChecking(true);
+    setAddError("");
+    setAddName("");
     try {
-      const res = await fetch(`/api/stocks/add-by-code?code=${code}`, { method: "POST" });
+      const res = await fetch(`/api/stocks/check-code?code=${code}`);
+      const data = await res.json();
       if (!res.ok) {
-        const err = await res.json();
-        alert(err.detail || "添加失败");
+        setAddError(data.detail || "查询失败");
         return;
       }
-      setAddCode("");
+      setAddName(data.name);
+    } catch (err) {
+      setAddError("查询失败，请检查网络");
+    } finally {
+      setAddChecking(false);
+    }
+  };
+
+  const handleAddConfirm = async () => {
+    const code = addCode.trim();
+    if (!code || !addName) return;
+    setAddSaving(true);
+    setAddError("");
+    try {
+      const res = await fetch(`/api/stocks/add-by-code?code=${code}`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setAddError(err.detail || "添加失败");
+        return;
+      }
+      setShowAdd(false);
       await fetchData();
     } catch (err) {
-      alert("添加失败");
+      setAddError("添加失败");
     } finally {
-      setAdding(false);
+      setAddSaving(false);
     }
   };
 
@@ -153,19 +190,9 @@ export default function StockList() {
             placeholder="搜索代码/名称/ETF..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 200 }}
+            style={{ width: 240 }}
           />
-          <input
-            type="text"
-            placeholder="输入股票代码新增..."
-            value={addCode}
-            onChange={(e) => setAddCode(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            style={{ width: 160 }}
-          />
-          <button className="btn btn-primary" onClick={handleAdd} disabled={adding || !addCode.trim()}>
-            {adding ? "添加中..." : "新增"}
-          </button>
+          <button className="btn btn-primary" onClick={openAddDialog}>新增股票</button>
           <button className="btn" onClick={handleAnalyze} disabled={fetching}>
             {fetching ? "分析中..." : "运行分析"}
           </button>
@@ -256,6 +283,52 @@ export default function StockList() {
           </table>
         </div>
       </div>
+
+      {showAdd && (
+        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>新增股票</h3>
+              <button className="btn btn-sm" onClick={() => setShowAdd(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">股票代码</label>
+                <div className="flex gap-sm">
+                  <input
+                    value={addCode}
+                    onChange={(e) => { setAddCode(e.target.value); setAddName(""); setAddError(""); }}
+                    placeholder="如 600036"
+                    style={{ flex: 1 }}
+                  />
+                  <button className="btn" onClick={handleCheckCode} disabled={addChecking || !addCode.trim()}>
+                    {addChecking ? "验证中..." : "验证"}
+                  </button>
+                </div>
+              </div>
+              {addName && (
+                <div className="form-group">
+                  <label className="form-label">股票名称</label>
+                  <input value={addName} readOnly style={{ opacity: 0.7 }} />
+                </div>
+              )}
+              {addError && (
+                <div style={{ color: "var(--danger)", fontSize: 13, marginBottom: 12 }}>{addError}</div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn" onClick={() => setShowAdd(false)}>取消</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleAddConfirm}
+                disabled={addSaving || !addName}
+              >
+                {addSaving ? "添加中..." : "确认添加"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -96,12 +96,32 @@ async def create_stock(data: StockCreate, db: AsyncSession = Depends(get_db)):
     return stock
 
 
+@router.get("/check-code")
+async def check_stock_code(code: str):
+    """Validate stock code and return name from Tencent API."""
+    existing_prefix = "sh" if code.startswith("6") else "sz"
+    symbol = f"{existing_prefix}{code}"
+    try:
+        resp = requests.get(f"https://qt.gtimg.cn/q={symbol}", timeout=10)
+        match = re.search(r'"(.+)"', resp.text)
+        if not match:
+            raise HTTPException(status_code=400, detail="股票代码无效")
+        data = match.group(1).split("~")
+        if len(data) < 2 or not data[1]:
+            raise HTTPException(status_code=400, detail="股票代码无效")
+        return {"code": code, "name": data[1]}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=502, detail="验证失败，请稍后重试")
+
+
 @router.post("/add-by-code", response_model=StockResponse, status_code=201)
 async def add_stock_by_code(code: str, db: AsyncSession = Depends(get_db)):
     """Add a stock by code, fetching name from Tencent API."""
     existing = await db.execute(select(Stock).where(Stock.code == code))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Stock code already exists")
+        raise HTTPException(status_code=400, detail="股票已存在")
 
     prefix = "sh" if code.startswith("6") else "sz"
     symbol = f"{prefix}{code}"
@@ -109,15 +129,15 @@ async def add_stock_by_code(code: str, db: AsyncSession = Depends(get_db)):
         resp = requests.get(f"https://qt.gtimg.cn/q={symbol}", timeout=10)
         match = re.search(r'"(.+)"', resp.text)
         if not match:
-            raise HTTPException(status_code=400, detail="Invalid stock code")
+            raise HTTPException(status_code=400, detail="股票代码无效")
         data = match.group(1).split("~")
         if len(data) < 2 or not data[1]:
-            raise HTTPException(status_code=400, detail="Invalid stock code")
+            raise HTTPException(status_code=400, detail="股票代码无效")
         name = data[1]
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=502, detail="Failed to fetch stock info")
+        raise HTTPException(status_code=502, detail="获取股票信息失败")
 
     stock = Stock(code=code, name=name, etf_list="")
     db.add(stock)
