@@ -51,13 +51,29 @@ async def list_stocks_with_latest(
 
     rows = []
     for stock in stocks:
-        sub = (
+        # Fetch up to 60 days of history for multi-period change calculation
+        history = (await db.execute(
             select(StockDailyData)
             .where(StockDailyData.stock_id == stock.id)
             .order_by(StockDailyData.date.desc())
-            .limit(1)
-        )
-        latest = (await db.execute(sub)).scalar_one_or_none()
+            .limit(60)
+        )).scalars().all()
+
+        latest = history[0] if history else None
+
+        change_5d = 0.0
+        change_20d = 0.0
+        change_60d = 0.0
+
+        if latest and len(history) > 1:
+            cur = latest.close
+            if len(history) >= 2:
+                change_5d = (cur / max(history[min(4, len(history)-1)].close, 0.01) - 1) * 100
+            if len(history) >= 20:
+                change_20d = (cur / max(history[min(19, len(history)-1)].close, 0.01) - 1) * 100
+            if len(history) >= 60:
+                change_60d = (cur / max(history[min(59, len(history)-1)].close, 0.01) - 1) * 100
+
         rows.append({
             "id": stock.id,
             "code": stock.code,
@@ -66,6 +82,9 @@ async def list_stocks_with_latest(
             "is_active": stock.is_active,
             "close": latest.close if latest else 0,
             "change_pct": latest.change_pct if latest else 0,
+            "change_5d": round(change_5d, 2),
+            "change_20d": round(change_20d, 2),
+            "change_60d": round(change_60d, 2),
             "pe_ttm": latest.pe_ttm if latest else 0,
             "pb": latest.pb if latest else 0,
             "market_cap": latest.market_cap if latest else 0,

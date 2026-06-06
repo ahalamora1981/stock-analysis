@@ -209,7 +209,10 @@ export default function StockList() {
                 <th>代码</th>
                 <th>名称</th>
                 <th style={{ textAlign: "right" }}>最新价</th>
-                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>涨跌幅{sortIndicator("change")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>60日{sortIndicator("change")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>20日{sortIndicator("change")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>5日{sortIndicator("change")}</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("change")}>当日{sortIndicator("change")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("score")}>综合评分{sortIndicator("score")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("valuation")}>估值{sortIndicator("valuation")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("technical")}>技术面{sortIndicator("technical")}</th>
@@ -221,11 +224,11 @@ export default function StockList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="11" className="loading">加载中...</td>
+                  <td colSpan="14" className="loading">加载中...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="empty-state"><h3>暂无数据</h3></td>
+                  <td colSpan="14" className="empty-state"><h3>暂无数据</h3></td>
                 </tr>
               ) : (
                 filtered.map((stock) => {
@@ -239,6 +242,33 @@ export default function StockList() {
                       <td>{stock.name}</td>
                       <td className="text-right">
                         {stock.close ? stock.close.toFixed(2) : "--"}
+                      </td>
+                      <td
+                        className="text-right"
+                        style={{
+                          color: stock.change_60d > 0 ? "var(--success)" : stock.change_60d < 0 ? "var(--danger)" : "var(--body)",
+                        }}
+                      >
+                        {stock.change_60d > 0 ? "+" : ""}
+                        {stock.change_60d ? stock.change_60d.toFixed(2) : "0.00"}%
+                      </td>
+                      <td
+                        className="text-right"
+                        style={{
+                          color: stock.change_20d > 0 ? "var(--success)" : stock.change_20d < 0 ? "var(--danger)" : "var(--body)",
+                        }}
+                      >
+                        {stock.change_20d > 0 ? "+" : ""}
+                        {stock.change_20d ? stock.change_20d.toFixed(2) : "0.00"}%
+                      </td>
+                      <td
+                        className="text-right"
+                        style={{
+                          color: stock.change_5d > 0 ? "var(--success)" : stock.change_5d < 0 ? "var(--danger)" : "var(--body)",
+                        }}
+                      >
+                        {stock.change_5d > 0 ? "+" : ""}
+                        {stock.change_5d ? stock.change_5d.toFixed(2) : "0.00"}%
                       </td>
                       <td
                         className="text-right"

@@ -119,14 +119,28 @@ async def get_stock_detail(stock_code: str, db: AsyncSession = Depends(get_db)):
     if not stock:
         return None
 
-    # Latest daily data
+    # Fetch 60 days history for multi-period changes
     from app.models.daily_data import StockDailyData
-    daily = (await db.execute(
+    history = (await db.execute(
         select(StockDailyData)
         .where(StockDailyData.stock_id == stock.id)
         .order_by(StockDailyData.date.desc())
-        .limit(1)
-    )).scalar_one_or_none()
+        .limit(60)
+    )).scalars().all()
+
+    daily = history[0] if history else None
+
+    change_5d = 0.0
+    change_20d = 0.0
+    change_60d = 0.0
+    if daily and len(history) > 1:
+        cur = daily.close
+        if len(history) >= 2:
+            change_5d = (cur / max(history[min(4, len(history)-1)].close, 0.01) - 1) * 100
+        if len(history) >= 20:
+            change_20d = (cur / max(history[min(19, len(history)-1)].close, 0.01) - 1) * 100
+        if len(history) >= 60:
+            change_60d = (cur / max(history[min(59, len(history)-1)].close, 0.01) - 1) * 100
 
     # Valuation
     valuation = (await db.execute(
@@ -175,6 +189,9 @@ async def get_stock_detail(stock_code: str, db: AsyncSession = Depends(get_db)):
         "daily": {
             "close": daily.close if daily else 0,
             "change_pct": daily.change_pct if daily else 0,
+            "change_5d": round(change_5d, 2),
+            "change_20d": round(change_20d, 2),
+            "change_60d": round(change_60d, 2),
             "pe_ttm": daily.pe_ttm if daily else 0,
             "pb": daily.pb if daily else 0,
             "market_cap": daily.market_cap if daily else 0,

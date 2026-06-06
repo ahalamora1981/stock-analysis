@@ -85,10 +85,28 @@ export default function StockDetail() {
             <div className="stat-label">最新价</div>
           </div>
           <div className="stat-card">
+            <div className="stat-value" style={{ color: daily.change_60d >= 0 ? "var(--success)" : "var(--danger)" }}>
+              {fmtPct(daily.change_60d)}
+            </div>
+            <div className="stat-label">60日涨跌幅</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: daily.change_20d >= 0 ? "var(--success)" : "var(--danger)" }}>
+              {fmtPct(daily.change_20d)}
+            </div>
+            <div className="stat-label">20日涨跌幅</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: daily.change_5d >= 0 ? "var(--success)" : "var(--danger)" }}>
+              {fmtPct(daily.change_5d)}
+            </div>
+            <div className="stat-label">5日涨跌幅</div>
+          </div>
+          <div className="stat-card">
             <div className="stat-value" style={{ color: daily.change_pct >= 0 ? "var(--success)" : "var(--danger)" }}>
               {fmtPct(daily.change_pct)}
             </div>
-            <div className="stat-label">涨跌幅</div>
+            <div className="stat-label">当日涨跌幅</div>
           </div>
           <div className="stat-card">
             <div className="stat-value">{fmt(daily.pe_ttm)}</div>
