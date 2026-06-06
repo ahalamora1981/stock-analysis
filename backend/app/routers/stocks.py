@@ -1,3 +1,6 @@
+import re
+
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,6 +90,36 @@ async def create_stock(data: StockCreate, db: AsyncSession = Depends(get_db)):
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Stock code already exists")
     stock = Stock(**data.model_dump())
+    db.add(stock)
+    await db.commit()
+    await db.refresh(stock)
+    return stock
+
+
+@router.post("/add-by-code", response_model=StockResponse, status_code=201)
+async def add_stock_by_code(code: str, db: AsyncSession = Depends(get_db)):
+    """Add a stock by code, fetching name from Tencent API."""
+    existing = await db.execute(select(Stock).where(Stock.code == code))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Stock code already exists")
+
+    prefix = "sh" if code.startswith("6") else "sz"
+    symbol = f"{prefix}{code}"
+    try:
+        resp = requests.get(f"https://qt.gtimg.cn/q={symbol}", timeout=10)
+        match = re.search(r'"(.+)"', resp.text)
+        if not match:
+            raise HTTPException(status_code=400, detail="Invalid stock code")
+        data = match.group(1).split("~")
+        if len(data) < 2 or not data[1]:
+            raise HTTPException(status_code=400, detail="Invalid stock code")
+        name = data[1]
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=502, detail="Failed to fetch stock info")
+
+    stock = Stock(code=code, name=name, etf_list="")
     db.add(stock)
     await db.commit()
     await db.refresh(stock)

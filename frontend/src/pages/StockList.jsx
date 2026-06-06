@@ -4,6 +4,8 @@ export default function StockList() {
   const [stocks, setStocks] = useState([]);
   const [scores, setScores] = useState({});
   const [search, setSearch] = useState("");
+  const [addCode, setAddCode] = useState("");
+  const [adding, setAdding] = useState(false);
   const [sortField, setSortField] = useState("rank");
   const [sortDir, setSortDir] = useState("asc");
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,26 @@ export default function StockList() {
     if (!confirm("确定删除这只股票？")) return;
     await fetch(`/api/stocks/${id}`, { method: "DELETE" });
     setStocks(stocks.filter((s) => s.id !== id));
+  };
+
+  const handleAdd = async () => {
+    const code = addCode.trim();
+    if (!code) return;
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/stocks/add-by-code?code=${code}`, { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || "添加失败");
+        return;
+      }
+      setAddCode("");
+      await fetchData();
+    } catch (err) {
+      alert("添加失败");
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleSort = (field) => {
@@ -131,8 +153,19 @@ export default function StockList() {
             placeholder="搜索代码/名称/ETF..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 240 }}
+            style={{ width: 200 }}
           />
+          <input
+            type="text"
+            placeholder="输入股票代码新增..."
+            value={addCode}
+            onChange={(e) => setAddCode(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            style={{ width: 160 }}
+          />
+          <button className="btn btn-primary" onClick={handleAdd} disabled={adding || !addCode.trim()}>
+            {adding ? "添加中..." : "新增"}
+          </button>
           <button className="btn" onClick={handleAnalyze} disabled={fetching}>
             {fetching ? "分析中..." : "运行分析"}
           </button>
