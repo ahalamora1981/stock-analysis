@@ -303,7 +303,7 @@ export default function StockList() {
                         ))}
                       </td>
                       <td className="text-right">
-                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(stock.id)}>
+                        <button className="btn btn-sm btn-success" onClick={() => handleDelete(stock.id)}>
                           删除
                         </button>
                       </td>
