@@ -73,6 +73,7 @@ export default function Settings() {
 
   const handleReset = () => {
     setWeights({ ...DEFAULTS });
+    setSavedWeights({ ...DEFAULTS });
     setMsg("");
   };
 
@@ -141,7 +142,7 @@ export default function Settings() {
           </button>
           <button className="btn" onClick={handleReset}>恢复默认</button>
           {isDirty && (
-            <span style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>
+            <span style={{ color: "#e22718", fontSize: 15, fontWeight: 700, marginLeft: 16 }}>
               修改未保存
             </span>
           )}
