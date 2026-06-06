@@ -7,20 +7,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import async_session, engine
 from app.models.stock import Base, Stock
 from app.models.daily_data import StockDailyData
-from app.models.analysis import ValuationAnalysis, TechnicalAnalysis
+from app.models.analysis import (
+    ValuationAnalysis, TechnicalAnalysis,
+    FundamentalAnalysis, CapitalFlowAnalysis,
+)
 
 
 def _percentile_rank(values: list[float], current: float) -> float:
     """Calculate percentile rank of current value in values list."""
     arr = np.array(values, dtype=float)
     arr = arr[arr > 0]
-    if len(arr) < 10 or current <= 0:
+    if len(arr) < 3 or current <= 0:
         return 50.0
     return float(np.sum(arr < current) / len(arr) * 100)
 
 
 def _calc_valuation_score(pe_pct: float, pb_pct: float) -> float:
-    """Score: lower PE/PB percentile = higher score (undervalued = good)."""
     pe_score = max(0, min(100, 100 - pe_pct))
     pb_score = max(0, min(100, 100 - pb_pct))
     return pe_score * 0.6 + pb_score * 0.4
@@ -28,11 +30,11 @@ def _calc_valuation_score(pe_pct: float, pb_pct: float) -> float:
 
 def _valuation_level(score: float) -> int:
     if score >= 65:
-        return 1  # 低估
+        return 1
     elif score >= 35:
-        return 2  # 合理
+        return 2
     else:
-        return 3  # 高估
+        return 3
 
 
 async def run_valuation_analysis():
@@ -53,7 +55,7 @@ async def run_valuation_analysis():
                 .order_by(StockDailyData.date.asc())
             )
             rows = history.scalars().all()
-            if len(rows) < 10:
+            if len(rows) < 1:
                 continue
 
             pe_values = [r.pe_ttm for r in rows if r.pe_ttm > 0]
@@ -62,7 +64,12 @@ async def run_valuation_analysis():
 
             pe_pct = _percentile_rank(pe_values, latest.pe_ttm) if pe_values else 50
             pb_pct = _percentile_rank(pb_values, latest.pb) if pb_values else 50
-            score = _calc_valuation_score(pe_pct, pb_pct)
+
+            # If very few data points, blend toward neutral
+            blend = min(1.0, len(rows) / 10.0)
+            raw_score = _calc_valuation_score(pe_pct, pb_pct)
+            score = 50 + (raw_score - 50) * blend
+
             level = _valuation_level(score)
 
             existing = await db.execute(
@@ -172,47 +179,76 @@ async def run_technical_analysis():
                 .order_by(StockDailyData.date.asc())
             )
             rows = history.scalars().all()
-            if len(rows) < 20:
+            if len(rows) < 2:
                 continue
 
             closes = [r.close for r in rows]
             highs = [r.high for r in rows]
             lows = [r.low for r in rows]
 
-            ma5 = np.mean(closes[-5:])
-            ma10 = np.mean(closes[-10:])
-            ma20 = np.mean(closes[-20:])
-            ma60 = np.mean(closes[-60:]) if len(closes) >= 60 else ma20
+            score = 50.0
 
-            dif, dea, hist = _calc_macd(closes)
-            k_vals, d_vals, j_vals = _calc_kdj(highs, lows, closes)
+            # MA trend - calculate what we can
+            if len(closes) >= 5:
+                ma5 = np.mean(closes[-5:])
+                if len(closes) >= 10:
+                    ma10 = np.mean(closes[-10:])
+                else:
+                    ma10 = ma5
+                if len(closes) >= 20:
+                    ma20 = np.mean(closes[-20:])
+                else:
+                    ma20 = ma10
+                if len(closes) >= 60:
+                    ma60 = np.mean(closes[-60:])
+                else:
+                    ma60 = ma20
+
+                if closes[-1] > ma5 > ma10 > ma20:
+                    score += 15
+                elif closes[-1] < ma5 < ma10 < ma20:
+                    score -= 15
+            else:
+                ma5 = ma10 = ma20 = ma60 = closes[-1]
+
+            # MACD - needs at least 26 points for proper EMA
+            if len(closes) >= 26:
+                dif, dea, hist = _calc_macd(closes)
+                if len(dif) >= 2:
+                    if dif[-1] > dea[-1] and dif[-2] <= dea[-2]:
+                        score += 15
+                    elif dif[-1] < dea[-1] and dif[-2] >= dea[-2]:
+                        score -= 15
+                    elif dif[-1] > dea[-1]:
+                        score += 5
+            else:
+                dif = dea = hist = [0]
+
+            # KDJ
+            if len(closes) >= 9:
+                k_vals, d_vals, j_vals = _calc_kdj(highs, lows, closes)
+                if k_vals[-1] < 20 and k_vals[-1] > d_vals[-1]:
+                    score += 10
+                elif k_vals[-1] > 80 and k_vals[-1] < d_vals[-1]:
+                    score -= 10
+            else:
+                k_vals = d_vals = j_vals = [50]
+
+            # RSI
             rsi6 = _calc_rsi(closes, 6)
             rsi14 = _calc_rsi(closes, 14)
-
-            # Score
-            score = 50.0
-            # MA trend
-            if closes[-1] > ma5 > ma10 > ma20:
-                score += 15
-            elif closes[-1] < ma5 < ma10 < ma20:
-                score -= 15
-            # MACD
-            if dif[-1] > dea[-1] and dif[-2] <= dea[-2]:
-                score += 15  # 金叉
-            elif dif[-1] < dea[-1] and dif[-2] >= dea[-2]:
-                score -= 15  # 死叉
-            elif dif[-1] > dea[-1]:
-                score += 5
-            # KDJ
-            if k_vals[-1] < 20 and k_vals[-1] > d_vals[-1]:
-                score += 10  # 超卖金叉
-            elif k_vals[-1] > 80 and k_vals[-1] < d_vals[-1]:
-                score -= 10  # 超买死叉
-            # RSI
             if rsi14[-1] < 30:
                 score += 10
             elif rsi14[-1] > 70:
                 score -= 10
+
+            # Price momentum bonus - simple trend
+            if len(closes) >= 5:
+                pct_5d = (closes[-1] / max(closes[-5], 0.01) - 1) * 100
+                if pct_5d > 5:
+                    score += 5
+                elif pct_5d < -5:
+                    score -= 5
 
             score = max(0, min(100, score))
             if score >= 65:
@@ -232,7 +268,9 @@ async def run_technical_analysis():
             data = dict(
                 stock_id=stock.id, analysis_date=today,
                 ma5=ma5, ma10=ma10, ma20=ma20, ma60=ma60,
-                macd=dif[-1], macd_signal=dea[-1], macd_hist=hist[-1],
+                macd=dif[-1] if dif else 0,
+                macd_signal=dea[-1] if dea else 0,
+                macd_hist=hist[-1] if hist else 0,
                 kdj_k=k_vals[-1], kdj_d=d_vals[-1], kdj_j=j_vals[-1],
                 rsi_6=rsi6[-1], rsi_14=rsi14[-1],
                 technical_score=score, signal=signal,
@@ -243,6 +281,193 @@ async def run_technical_analysis():
                         setattr(row, k, v)
             else:
                 db.add(TechnicalAnalysis(**data))
+            count += 1
+
+        await db.commit()
+        return count
+
+
+async def run_fundamental_analysis():
+    """Run fundamental analysis using available financial indicators."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    today = date.today()
+    async with async_session() as db:
+        result = await db.execute(select(Stock).where(Stock.is_active == True))
+        stocks = result.scalars().all()
+        count = 0
+
+        for stock in stocks:
+            history = await db.execute(
+                select(StockDailyData)
+                .where(StockDailyData.stock_id == stock.id)
+                .order_by(StockDailyData.date.asc())
+            )
+            rows = history.scalars().all()
+            if len(rows) < 1:
+                continue
+
+            latest = rows[-1]
+            score = 50.0
+
+            # PE assessment - lower is better (within reason)
+            if latest.pe_ttm > 0:
+                if latest.pe_ttm < 10:
+                    score += 15
+                elif latest.pe_ttm < 20:
+                    score += 10
+                elif latest.pe_ttm < 30:
+                    score += 5
+                elif latest.pe_ttm > 60:
+                    score -= 10
+                elif latest.pe_ttm > 100:
+                    score -= 15
+
+            # PB assessment - lower is better
+            if latest.pb > 0:
+                if latest.pb < 1:
+                    score += 15
+                elif latest.pb < 2:
+                    score += 10
+                elif latest.pb < 3:
+                    score += 5
+                elif latest.pb > 8:
+                    score -= 10
+                elif latest.pb > 15:
+                    score -= 15
+
+            # Market cap stability - larger cap = more stable
+            if latest.market_cap > 0:
+                cap_b = latest.market_cap / 1e8
+                if cap_b > 1000:
+                    score += 5
+                elif cap_b > 500:
+                    score += 3
+                elif cap_b < 50:
+                    score -= 3
+
+            # Earnings yield (inverse PE) vs risk-free rate proxy
+            if latest.pe_ttm > 0:
+                earnings_yield = 100 / latest.pe_ttm
+                if earnings_yield > 10:
+                    score += 5
+                elif earnings_yield > 5:
+                    score += 3
+
+            # PB-ROE relationship proxy (lower PB with positive PE is good)
+            if latest.pe_ttm > 0 and latest.pb > 0:
+                pe_pb_ratio = latest.pe_ttm / latest.pb
+                if pe_pb_ratio > 20:
+                    score += 3
+                elif pe_pb_ratio < 2:
+                    score -= 3
+
+            score = max(0, min(100, score))
+
+            existing = await db.execute(
+                select(FundamentalAnalysis).where(
+                    FundamentalAnalysis.stock_id == stock.id,
+                    FundamentalAnalysis.analysis_date == today,
+                )
+            )
+            row = existing.scalar_one_or_none()
+            if row:
+                row.fundamental_score = score
+            else:
+                db.add(FundamentalAnalysis(
+                    stock_id=stock.id,
+                    analysis_date=today,
+                    fundamental_score=score,
+                ))
+            count += 1
+
+        await db.commit()
+        return count
+
+
+async def run_capital_flow_analysis():
+    """Run capital flow analysis using volume and price changes."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    today = date.today()
+    async with async_session() as db:
+        result = await db.execute(select(Stock).where(Stock.is_active == True))
+        stocks = result.scalars().all()
+        count = 0
+
+        for stock in stocks:
+            history = await db.execute(
+                select(StockDailyData)
+                .where(StockDailyData.stock_id == stock.id)
+                .order_by(StockDailyData.date.asc())
+            )
+            rows = history.scalars().all()
+            if len(rows) < 5:
+                continue
+
+            closes = [r.close for r in rows]
+            volumes = [r.volume for r in rows]
+            score = 50.0
+
+            # Volume trend - increasing volume with price up = bullish
+            if len(volumes) >= 10:
+                vol_5 = np.mean(volumes[-5:])
+                vol_10 = np.mean(volumes[-10:])
+                vol_change = (vol_5 / max(vol_10, 1) - 1) * 100
+
+                price_change = (closes[-1] / max(closes[-5], 0.01) - 1) * 100
+
+                # Bullish: volume up + price up
+                if vol_change > 20 and price_change > 0:
+                    score += 15
+                elif vol_change > 10 and price_change > 0:
+                    score += 10
+                # Bearish: volume up + price down (selling pressure)
+                elif vol_change > 20 and price_change < 0:
+                    score -= 15
+                elif vol_change > 10 and price_change < 0:
+                    score -= 10
+                # Quiet accumulation: volume down + price stable
+                elif vol_change < -20 and abs(price_change) < 2:
+                    score += 5
+
+            # Recent volume spike
+            if len(volumes) >= 20:
+                vol_20 = np.mean(volumes[-20:])
+                if volumes[-1] > vol_20 * 2:
+                    if closes[-1] > closes[-2]:
+                        score += 10
+                    else:
+                        score -= 10
+
+            # Price-volume divergence
+            if len(closes) >= 10 and len(volumes) >= 10:
+                price_trend = closes[-1] - closes[-10]
+                vol_trend = np.mean(volumes[-5:]) - np.mean(volumes[-10:])
+                if price_trend > 0 and vol_trend < 0:
+                    score -= 5  # Price up on declining volume - weak
+                elif price_trend < 0 and vol_trend > 0:
+                    score -= 5  # Price down on increasing volume - distribution
+
+            score = max(0, min(100, score))
+
+            existing = await db.execute(
+                select(CapitalFlowAnalysis).where(
+                    CapitalFlowAnalysis.stock_id == stock.id,
+                    CapitalFlowAnalysis.analysis_date == today,
+                )
+            )
+            row = existing.scalar_one_or_none()
+            if row:
+                row.capital_flow_score = score
+            else:
+                db.add(CapitalFlowAnalysis(
+                    stock_id=stock.id,
+                    analysis_date=today,
+                    capital_flow_score=score,
+                ))
             count += 1
 
         await db.commit()

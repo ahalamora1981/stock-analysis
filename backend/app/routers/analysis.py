@@ -8,7 +8,7 @@ from app.models.analysis import (
     CompositeScore,
 )
 from app.models.stock import Stock
-from app.services.analyzer import run_valuation_analysis, run_technical_analysis
+from app.services.analyzer import run_valuation_analysis, run_technical_analysis, run_fundamental_analysis, run_capital_flow_analysis
 from app.services.scorer import run_composite_scoring
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -18,11 +18,16 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 async def run_analysis():
     v = await run_valuation_analysis()
     t = await run_technical_analysis()
-    c = await run_composite_scoring()
+    f = await run_fundamental_analysis()
+    c = await run_capital_flow_analysis()
+    from app.services.scorer import run_composite_scoring
+    s = await run_composite_scoring()
     return {
         "valuation": v,
         "technical": t,
-        "composite": c,
+        "fundamental": f,
+        "capital_flow": c,
+        "composite": s,
     }
 
 
