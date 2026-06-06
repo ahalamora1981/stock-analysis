@@ -162,6 +162,7 @@ export default function StockList() {
       case "change_20d": return s.change_20d || 0;
       case "change_5d": return s.change_5d || 0;
       case "change": return s.change_pct || 0;
+      case "market_cap": return s.market_cap || 0;
       default: return 0;
     }
   };
@@ -219,7 +220,7 @@ export default function StockList() {
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("score")}>综合评分{sortIndicator("score")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("valuation")}>估值{sortIndicator("valuation")}</th>
                 <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("technical")}>技术面{sortIndicator("technical")}</th>
-                <th style={{ textAlign: "right" }}>总市值</th>
+                <th style={{ textAlign: "right", ...thStyle }} onClick={() => handleSort("market_cap")}>总市值{sortIndicator("market_cap")}</th>
                 <th>所属ETF</th>
                 <th style={{ textAlign: "right" }}>操作</th>
               </tr>
