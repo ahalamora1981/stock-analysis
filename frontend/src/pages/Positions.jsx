@@ -116,7 +116,7 @@ export default function Positions() {
               <label className="form-label">备注</label>
               <input value={buyForm.note} onChange={(e) => setBuyForm({ ...buyForm, note: e.target.value })} placeholder="可选" />
             </div>
-            <button className="btn btn-primary" type="submit" style={{ height: 48 }}>确认买入</button>
+            <button className="btn btn-primary" type="submit" style={{ height: 48, marginBottom: 16 }}>确认买入</button>
           </form>
         </div>
       )}
@@ -140,7 +140,7 @@ export default function Positions() {
               <label className="form-label">备注</label>
               <input value={sellForm.note} onChange={(e) => setSellForm({ ...sellForm, note: e.target.value })} placeholder="可选" />
             </div>
-            <button className="btn" type="submit" style={{ height: 48, borderColor: "var(--success)", color: "var(--success)" }}>确认卖出</button>
+            <button className="btn" type="submit" style={{ height: 48, marginBottom: 16, borderColor: "var(--success)", color: "var(--success)" }}>确认卖出</button>
           </form>
         </div>
       )}
