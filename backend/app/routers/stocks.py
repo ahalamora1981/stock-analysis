@@ -219,8 +219,11 @@ async def initialize_all():
     await import_stocks()
     # 2. 获取日线数据（同步函数，用 run_in_executor）
     import asyncio
+    from app.services.data_fetcher import fetch_all_history
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, update_all_daily_data)
-    # 3. 运行分析
+    # 3. 获取历史 K 线数据（250 天）
+    await loop.run_in_executor(None, fetch_all_history)
+    # 4. 运行分析
     await run_all_analysis()
     return {"message": "初始化完成"}
