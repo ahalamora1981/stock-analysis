@@ -217,8 +217,10 @@ async def initialize_all():
     """一键初始化：导入股票、获取数据、运行分析"""
     # 1. 导入股票
     await import_stocks()
-    # 2. 获取日线数据
-    await update_all_daily_data()
+    # 2. 获取日线数据（同步函数，用 run_in_executor）
+    import asyncio
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, update_all_daily_data)
     # 3. 运行分析
     await run_all_analysis()
     return {"message": "初始化完成"}
