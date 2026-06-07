@@ -1,3 +1,4 @@
+import os
 import re
 import time
 
@@ -13,6 +14,10 @@ from app.models.daily_data import StockDailyData
 
 def _get_session() -> requests.Session:
     s = requests.Session()
+    # Support proxy via environment variable
+    proxy = os.environ.get("HTTP_PROXY") or os.environ.get("https_proxy")
+    if proxy:
+        s.proxies = {"http": proxy, "https": proxy}
     return s
 
 
@@ -41,7 +46,12 @@ def fetch_realtime_quotes() -> pd.DataFrame:
     for i in range(0, len(symbols), batch_size):
         batch = symbols[i : i + batch_size]
         query = ",".join(batch)
-        resp = s.get(f"https://qt.gtimg.cn/q={query}", timeout=30)
+        try:
+            resp = s.get(f"https://qt.gtimg.cn/q={query}", timeout=30)
+            resp.raise_for_status()
+        except Exception as e:
+            print(f"Failed to fetch batch {i}: {e}")
+            continue
         for line in resp.text.strip().split("\n"):
             if "=" not in line:
                 continue
@@ -66,7 +76,7 @@ def fetch_realtime_quotes() -> pd.DataFrame:
                     "涨跌幅": float(data[32] or 0),
                     "成交额": float(data[37] or 0),
                     "换手率": float(data[38] or 0),
-                    "市盈率-动态": float(data[39] or 0),
+                    "市盈率 - 动态": float(data[39] or 0),
                     "总市值": float(data[44] or 0),
                     "市净率": float(data[46] or 0) if len(data) > 46 else 0,
                 }
@@ -74,6 +84,7 @@ def fetch_realtime_quotes() -> pd.DataFrame:
             except (ValueError, IndexError):
                 continue
 
+    print(f"Fetched quotes for {len(all_rows)} stocks")
     return pd.DataFrame(all_rows)
 
 
@@ -87,7 +98,12 @@ def fetch_stock_history(code: str, days: int = 250) -> list[dict]:
         "param": f"{symbol},day,,,{days},qfq",
     }
     s = _get_session()
-    resp = s.get(url, params=params, timeout=15)
+    try:
+        resp = s.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"Failed to fetch history for {code}: {e}")
+        return []
     text = resp.text
     # Parse: kline_dayqfq={...}
     json_str = text.split("=", 1)[1] if "=" in text else text

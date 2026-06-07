@@ -223,3 +223,22 @@ async def initialize_all():
     # 3. 运行分析
     await run_all_analysis()
     return {"message": "初始化完成"}
+
+
+@router.get("/test-api")
+async def test_api():
+    """测试腾讯 API 连通性"""
+    import os
+    from app.services.data_fetcher import _get_session
+    s = _get_session()
+    try:
+        resp = s.get("https://qt.gtimg.cn/q=sh600036", timeout=10)
+        return {
+            "status": "ok" if resp.status_code == 200 else "error",
+            "status_code": resp.status_code,
+            "proxy": os.environ.get("HTTP_PROXY") or os.environ.get("https_proxy") or "none",
+            "response_length": len(resp.text),
+            "sample": resp.text[:200],
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
