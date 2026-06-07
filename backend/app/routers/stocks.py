@@ -117,6 +117,25 @@ async def check_stock_code(code: str):
         raise HTTPException(status_code=502, detail="验证失败，请稍后重试")
 
 
+@router.get("/test-api")
+async def test_api():
+    """测试腾讯 API 连通性"""
+    import os
+    from app.services.data_fetcher import _get_session
+    s = _get_session()
+    try:
+        resp = s.get("https://qt.gtimg.cn/q=sh600036", timeout=10)
+        return {
+            "status": "ok" if resp.status_code == 200 else "error",
+            "status_code": resp.status_code,
+            "proxy": os.environ.get("HTTP_PROXY") or os.environ.get("https_proxy") or "none",
+            "response_length": len(resp.text),
+            "sample": resp.text[:200],
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @router.get("/{stock_id}", response_model=StockResponse)
 async def get_stock(stock_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Stock).where(Stock.id == stock_id))
@@ -136,26 +155,6 @@ async def create_stock(data: StockCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(stock)
     return stock
-
-
-@router.get("/check-code")
-async def check_stock_code(code: str):
-    """Validate stock code and return name from Tencent API."""
-    existing_prefix = "sh" if code.startswith("6") else "sz"
-    symbol = f"{existing_prefix}{code}"
-    try:
-        resp = requests.get(f"https://qt.gtimg.cn/q={symbol}", timeout=10)
-        match = re.search(r'"(.+)"', resp.text)
-        if not match:
-            raise HTTPException(status_code=400, detail="股票代码无效")
-        data = match.group(1).split("~")
-        if len(data) < 2 or not data[1]:
-            raise HTTPException(status_code=400, detail="股票代码无效")
-        return {"code": code, "name": data[1]}
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=502, detail="验证失败，请稍后重试")
 
 
 @router.post("/add-by-code", response_model=StockResponse, status_code=201)
@@ -223,22 +222,3 @@ async def initialize_all():
     # 3. 运行分析
     await run_all_analysis()
     return {"message": "初始化完成"}
-
-
-@router.get("/test-api")
-async def test_api():
-    """测试腾讯 API 连通性"""
-    import os
-    from app.services.data_fetcher import _get_session
-    s = _get_session()
-    try:
-        resp = s.get("https://qt.gtimg.cn/q=sh600036", timeout=10)
-        return {
-            "status": "ok" if resp.status_code == 200 else "error",
-            "status_code": resp.status_code,
-            "proxy": os.environ.get("HTTP_PROXY") or os.environ.get("https_proxy") or "none",
-            "response_length": len(resp.text),
-            "sample": resp.text[:200],
-        }
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
