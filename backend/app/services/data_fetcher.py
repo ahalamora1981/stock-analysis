@@ -130,20 +130,25 @@ def fetch_stock_history(code: str, days: int = 250) -> list[dict]:
 
 def update_all_daily_data():
     """Fetch and store daily data for all active stocks."""
+    import sqlalchemy
     from sqlalchemy.orm import Session
+    from app.config import DATABASE_URL
 
-    db_path = "data/stock_analysis.db"
+    db_path = DATABASE_URL.replace("sqlite+aiosqlite:///", "")
+    print(f"Database path: {db_path}")
     engine_sync = sqlalchemy.create_engine(f"sqlite:///{db_path}")
     Base.metadata.create_all(engine_sync)
 
-    quotes = fetch_realtime_quotes()
-    quote_map = {}
-    for _, row in quotes.iterrows():
-        code = str(row["代码"]).strip()
-        quote_map[code] = row
-
     with Session(engine_sync) as db:
         stocks = db.execute(select(Stock).where(Stock.is_active == True)).scalars().all()
+        print(f"Found {len(stocks)} active stocks")
+        quote_map = {}
+        try:
+            quotes = fetch_realtime_quotes()
+            quote_map = {row["代码"]: row for _, row in quotes.iterrows()}
+            print(f"Fetched quotes for {len(quote_map)} stocks")
+        except Exception as e:
+            print(f"Failed to fetch quotes: {e}")
         count = 0
         for stock in stocks:
             q = quote_map.get(stock.code)
@@ -177,6 +182,7 @@ def update_all_daily_data():
             )
             count += 1
         db.commit()
+        print(f"Stored daily data for {count} stocks")
     engine_sync.dispose()
     return count
 
@@ -185,8 +191,9 @@ def fetch_all_history():
     """Fetch historical kline data for all active stocks."""
     import sqlalchemy
     from sqlalchemy.orm import Session
+    from app.config import DATABASE_URL
 
-    db_path = "data/stock_analysis.db"
+    db_path = DATABASE_URL.replace("sqlite+aiosqlite:///", "")
     engine_sync = sqlalchemy.create_engine(f"sqlite:///{db_path}")
     Base.metadata.create_all(engine_sync)
 
